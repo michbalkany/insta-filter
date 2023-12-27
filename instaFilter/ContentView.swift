@@ -4,7 +4,8 @@
 //
 //  Created by Mich balkany on 12/25/23.
 //
-
+import CoreImage
+import CoreImage.CIFilterBuiltins
 import PhotosUI
 import SwiftUI
 
@@ -12,6 +13,9 @@ struct ContentView: View {
     @State private var processedImage: Image?
     @State private var filterIntesity = 0.5
     @State private var selectedItem: PhotosPickerItem?
+    
+    @State private var currentFilter = CIFilter.sepiaTone()
+    let context = CIContext()
     
     var body: some View {
         NavigationStack {
@@ -27,19 +31,21 @@ struct ContentView: View {
                         ContentUnavailableView("No picture", systemImage: "photo.badge.plus", description:Text("Tap to import a photo"))
                     }
                 }
+                .buttonStyle(.plain)
+                .onChange(of: selectedItem, loadImage)
                 
                 Spacer()
                 
                 HStack {
                     Text("Intensity")
                     Slider(value: $filterIntesity)
+                        .onChange(of: filterIntesity, applyProcessing)
                 }
+                
                 
                 HStack {
                     Button("Change Filter", action: changeFilter)
                     Spacer()
-                    
-                    
                 }
             }
             .padding([.horizontal, .bottom])
@@ -57,8 +63,22 @@ struct ContentView: View {
             
             guard let inputImage = UIImage(data: imageData) else { return }
             
-            // more code to come
+            let beginImage = CIImage(image: inputImage)
+            currentFilter.setValue(beginImage, forKey: kCIInputImageKey)
+            applyProcessing()
         }
+    }
+        
+        func applyProcessing() {
+            currentFilter.intensity = Float(filterIntesity)
+            
+            guard let outputImage  = currentFilter.outputImage else { return }
+            guard let cgImage = context.createCGImage(outputImage, from: outputImage.extent)
+                    else { return }
+            
+            let uiImage = UIImage(cgImage: cgImage)
+            processedImage = Image(uiImage: uiImage)
+        
     }
 }
 
